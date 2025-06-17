@@ -2,6 +2,7 @@
 using CentralAPI.ClientPlugin.Network;
 
 using LabApi.Loader.Features.Plugins;
+using LabExtended.Commands;
 
 namespace CentralAPI.ClientPlugin.Core;
 

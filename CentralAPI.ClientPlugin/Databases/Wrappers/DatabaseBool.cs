@@ -24,4 +24,10 @@ public class DatabaseBool : DatabaseWrapper<bool>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(bool value, out string result)
+    {
+        result = value.ToString();
+    }
 }

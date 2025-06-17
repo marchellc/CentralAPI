@@ -27,6 +27,12 @@ public class DatabaseCollectionBase
     
     internal virtual Type ItemType { get; }
 
+    internal virtual bool InternalTryGetString(string name, out string value)
+    {
+        value = null;
+        return false;
+    }
+
     internal virtual bool InternalTryGet(string name, out DatabaseItemBase item)
     {
         item = null;

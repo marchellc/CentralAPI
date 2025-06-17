@@ -17,17 +17,22 @@ public static class DatabaseDirector
 {
     internal static readonly Dictionary<byte, DatabaseTable> tables = new();
     internal static readonly Dictionary<Type, object> wrappers = new();
-    
+
     /// <summary>
     /// Whether or not the database has been downloaded yet.
     /// </summary>
     public static bool IsDownloaded { get; private set; }
 
     /// <summary>
+    /// Whether or not the database is currently downloading.
+    /// </summary>
+    public static bool IsDownloading { get; private set; }
+
+    /// <summary>
     /// Contains a list of collections required by the client.
     /// </summary>
     public static Dictionary<byte, Dictionary<byte, Type>> RequiredCollections { get; } = new();
-    
+
     /// <summary>
     /// Gets the server's personal database table.
     /// </summary>
@@ -37,7 +42,7 @@ public static class DatabaseDirector
     /// Gets the server's global database table.
     /// </summary>
     public static DatabaseTable? GlobalTable { get; private set; }
-    
+
     /// <summary>
     /// Gets called before the database starts downloading.
     /// </summary>
@@ -61,8 +66,8 @@ public static class DatabaseDirector
     /// <summary>
     /// Gets called when a database table is cleared.
     /// </summary>
-    public static event Action<DatabaseTable>? Cleared; 
-    
+    public static event Action<DatabaseTable>? Cleared;
+
     /// <summary>
     /// Marks a collection as required by the client. This will have if invoked after the client connects.
     /// </summary>
@@ -80,10 +85,10 @@ public static class DatabaseDirector
     {
         if (CentralPlugin.Config.GlobalTable < 0 || CentralPlugin.Config.GlobalTable > 255)
             return;
-        
+
         RequireCollection<T>((byte)CentralPlugin.Config.GlobalTable, collectionId);
     }
-    
+
     /// <summary>
     /// Marks a collection as required by the client (uses the server's personal table ID defined via config).
     /// </summary>
@@ -93,7 +98,7 @@ public static class DatabaseDirector
     {
         if (CentralPlugin.Config.ServerTable < 0 || CentralPlugin.Config.ServerTable > 255)
             return;
-        
+
         RequireCollection<T>((byte)CentralPlugin.Config.ServerTable, collectionId);
     }
 
@@ -132,9 +137,9 @@ public static class DatabaseDirector
 
         table = new();
         table.Id = tableId;
-        
+
         Added?.InvokeSafe(table);
-        
+
         tables.Add(tableId, table);
 
         AddTableRequest.SendRequest(tableId);
@@ -150,11 +155,11 @@ public static class DatabaseDirector
         if (TryGetTable(tableId, out var table))
         {
             Dropped?.InvokeSafe(table);
-            
+
             tables.Remove(tableId);
-            
+
             table.InternalDestroy(true);
-            
+
             ClearTableRequest.SendRequest(table.Id, true);
         }
     }
@@ -169,9 +174,9 @@ public static class DatabaseDirector
             && table.Size > 0)
         {
             table.InternalClear();
-            
+
             Cleared?.InvokeSafe(table);
-            
+
             ClearTableRequest.SendRequest(table.Id, false);
         }
     }
@@ -189,7 +194,7 @@ public static class DatabaseDirector
 
         wrappers[typeof(T)] = wrapper;
     }
-    
+
     /// <summary>
     /// Attempts to find a wrapper for a given type.
     /// </summary>
@@ -221,7 +226,7 @@ public static class DatabaseDirector
         else if (typeof(T).GetGenericTypeDefinition() == typeof(List<>))
         {
             var elementType = typeof(T).GetGenericArguments()[0];
-            
+
             if (wrappers.TryGetValue(elementType, out reference))
             {
                 wrapper =
@@ -241,7 +246,8 @@ public static class DatabaseDirector
                 && wrappers.TryGetValue(valueType, out var valueReference))
             {
                 wrapper =
-                    Activator.CreateInstance(typeof(DatabaseDictionary<,>).MakeGenericType(keyType, valueType), keyReference, valueReference) as
+                    Activator.CreateInstance(typeof(DatabaseDictionary<,>).MakeGenericType(keyType, valueType),
+                            keyReference, valueReference) as
                         DatabaseWrapper<T>;
 
                 wrappers[typeof(T)] = wrapper;
@@ -253,35 +259,47 @@ public static class DatabaseDirector
         return false;
     }
 
+    /// <summary>
+    /// Discards the current database and re-downloads all values.
+    /// </summary>
+    public static void Download()
+    {
+        if (NetworkClient.Scp is null)
+            throw new Exception("The client is not connected.");
+        
+        OnDisconnected();
+        OnReady();
+    }
+
     private static void RegisterWrappers()
     {
         RegisterWrapper(new DatabaseBool());
-        
+
         RegisterWrapper(new DatabaseChar());
         RegisterWrapper(new DatabaseString());
-        
+
         RegisterWrapper(new DatabaseIpAddress());
         RegisterWrapper(new DatabaseIpEndPoint());
-        
+
         RegisterWrapper(new DatabaseDateTime());
         RegisterWrapper(new DatabaseTimeSpan());
-        
+
         RegisterWrapper(new DatabaseByte());
         RegisterWrapper(new DatabaseSByte());
-        
+
         RegisterWrapper(new DatabaseInt16());
         RegisterWrapper(new DatabaseUInt16());
-        
+
         RegisterWrapper(new DatabaseInt32());
         RegisterWrapper(new DatabaseUInt32());
-        
+
         RegisterWrapper(new DatabaseInt64());
         RegisterWrapper(new DatabaseUInt64());
-        
+
         RegisterWrapper(new DatabaseDouble());
         RegisterWrapper(new DatabaseFloat());
     }
-    
+
     private static void OnReady()
     {
         Timing.CallDelayed(5f, () =>
@@ -294,10 +312,11 @@ public static class DatabaseDirector
             DownloadRequest.SendRequest();
         });
     }
-    
+
     private static void OnDisconnected()
     {
         IsDownloaded = false;
+        IsDownloading = false;
         
         foreach (var table in tables)
             table.Value.InternalDestroy();
@@ -307,9 +326,10 @@ public static class DatabaseDirector
 
     internal static void OnDownloaded()
     {
-        if (IsDownloaded)
+        if (IsDownloaded || !IsDownloading)
             return;
-        
+
+        IsDownloading = false;
         IsDownloaded = true;
 
         if (CentralPlugin.Config.ServerTable > -1 && CentralPlugin.Config.ServerTable < byte.MaxValue)
@@ -323,8 +343,11 @@ public static class DatabaseDirector
 
     internal static void OnDownloading()
     {
-        if (IsDownloaded)
+        if (IsDownloaded || IsDownloading)
             return;
+
+        IsDownloaded = false;
+        IsDownloading = true;
         
         Downloading?.InvokeSafe();
     }

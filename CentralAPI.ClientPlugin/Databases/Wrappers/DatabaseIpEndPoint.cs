@@ -26,4 +26,16 @@ public class DatabaseIpEndPoint : DatabaseWrapper<IPEndPoint>
     {
         return Equals(value, other);
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(IPEndPoint value, out string result)
+    {
+        if (value is null)
+        {
+            result = "(null)";
+            return;
+        }
+
+        result = value.ToString();
+    }
 }

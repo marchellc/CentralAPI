@@ -512,6 +512,18 @@ public class DatabaseCollection<T> : DatabaseCollectionBase
     internal override bool InternalTryGet(string name, out DatabaseItemBase item)   
         => items.TryGetValue(name, out item);
 
+    internal override bool InternalTryGetString(string name, out string value)
+    {
+        if (!items.TryGetValue(name, out var item))
+        {
+            value = "ItemNotFound";
+            return false;
+        }
+        
+        wrapper.Convert(item.value, out value);
+        return value?.Length > 0;
+    }
+
     internal override void InternalInit()
     {
         if (!DatabaseDirector.TryGetWrapper(out wrapper))

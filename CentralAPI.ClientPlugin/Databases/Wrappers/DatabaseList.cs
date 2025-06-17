@@ -88,4 +88,16 @@ public class DatabaseList<T> : DatabaseWrapper<List<T>>
 
         return true;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(List<T> value, out string result)
+    {
+        if (value is null)
+        {
+            result = "(null)";
+            return;
+        }
+
+        result = $"List ({value.Count} item(s))";
+    }
 }

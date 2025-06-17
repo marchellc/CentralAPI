@@ -24,4 +24,10 @@ public class DatabaseFloat : DatabaseWrapper<float>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(float value, out string result)
+    {
+        result = value.ToString();
+    }
 }

@@ -24,4 +24,10 @@ public class DatabaseTimeSpan : DatabaseWrapper<TimeSpan>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(TimeSpan value, out string result)
+    {
+        result = value.ToString();
+    }
 }

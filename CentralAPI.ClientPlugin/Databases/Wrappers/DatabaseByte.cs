@@ -24,4 +24,10 @@ public class DatabaseByte : DatabaseWrapper<byte>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(byte value, out string result)
+    {
+        result = value.ToString();
+    }
 }

@@ -98,4 +98,16 @@ public class DatabaseDictionary<TKey, TValue> : DatabaseWrapper<Dictionary<TKey,
 
         return true;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(Dictionary<TKey, TValue> value, out string result)
+    {
+        if (value is null)
+        {
+            result = "(null)";
+            return;
+        }
+
+        result = $"Dictionary ({value.Count} item(s))";
+    }
 }

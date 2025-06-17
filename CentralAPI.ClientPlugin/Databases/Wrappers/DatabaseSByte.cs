@@ -24,4 +24,10 @@ public class DatabaseSByte : DatabaseWrapper<sbyte>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(sbyte value, out string result)
+    {
+        result = value.ToString();
+    }
 }

@@ -24,4 +24,10 @@ public class DatabaseUInt16 : DatabaseWrapper<ushort>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(ushort value, out string result)
+    {
+        result = value.ToString();
+    }
 }

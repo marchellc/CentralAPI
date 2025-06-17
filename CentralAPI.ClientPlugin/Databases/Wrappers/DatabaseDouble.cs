@@ -24,4 +24,10 @@ public class DatabaseDouble : DatabaseWrapper<double>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(double value, out string result)
+    {
+        result = value.ToString();
+    }
 }

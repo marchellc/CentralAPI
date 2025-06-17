@@ -1,4 +1,6 @@
+using LabExtended.Extensions;
 using NetworkLib;
+using NorthwoodLib.Pools;
 
 namespace CentralAPI.ClientPlugin.Databases.Wrappers;
 
@@ -67,5 +69,17 @@ public class DatabaseArray<T> : DatabaseWrapper<T[]>
         }
 
         return true;
+    }
+
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(T[] value, out string result)
+    {
+        if (value is null)
+        {
+            result = "(null)";
+            return;
+        }
+
+        result = $"Array ({value.Length} item(s))";
     }
 }

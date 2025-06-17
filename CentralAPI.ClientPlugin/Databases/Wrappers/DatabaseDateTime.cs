@@ -24,4 +24,10 @@ public class DatabaseDateTime : DatabaseWrapper<DateTime>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(DateTime value, out string result)
+    {
+        result = value.ToString();
+    }
 }

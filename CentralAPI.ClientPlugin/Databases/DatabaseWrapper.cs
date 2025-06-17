@@ -29,4 +29,14 @@ public abstract class DatabaseWrapper<T>
     /// <param name="other">The second value.</param>
     /// <returns>true if the values are the same.</returns>
     public abstract bool Compare(ref T value, ref T other);
+
+    /// <summary>
+    /// Converts the specified value to a string.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <param name="result">The converted value.</param>
+    public virtual void Convert(T value, out string result)
+    {
+        result = $"ConversionNotImplemented ({GetType().Name})";
+    }
 }

@@ -26,4 +26,16 @@ public class DatabaseIpAddress : DatabaseWrapper<IPAddress>
     {
         return Equals(value, other);
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(IPAddress value, out string result)
+    {
+        if (value is null)
+        {
+            result = "(null)";
+            return;
+        }
+
+        result = value.ToString();
+    }
 }

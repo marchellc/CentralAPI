@@ -24,4 +24,10 @@ public class DatabaseChar : DatabaseWrapper<char>
     {
         return value == other;
     }
+    
+    /// <inheritdoc cref="DatabaseWrapper{T}.Convert"/>
+    public override void Convert(char value, out string result)
+    {
+        result = value.ToString();
+    }
 }
