@@ -1,3 +1,4 @@
+using CentralAPI.SharedLib;
 using NetworkLib;
 
 namespace CentralAPI.ClientPlugin.Databases.Wrappers;
@@ -10,13 +11,13 @@ public class DatabaseDateTime : DatabaseWrapper<DateTime>
     /// <inheritdoc cref="DatabaseWrapper{T}.Read"/>
     public override void Read(NetworkReader reader, ref DateTime value)
     {
-        value = new DateTime(reader.ReadLong());
+        value = reader.ReadDate();
     }
 
     /// <inheritdoc cref="DatabaseWrapper{T}.Write"/>
     public override void Write(NetworkWriter writer, ref DateTime value)
     {
-        writer.WriteLong(value.Ticks);
+        writer.WriteDate(value);
     }
 
     /// <inheritdoc cref="DatabaseWrapper{T}.Compare"/>

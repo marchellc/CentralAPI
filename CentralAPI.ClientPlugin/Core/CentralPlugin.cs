@@ -1,8 +1,9 @@
-﻿using CentralAPI.ClientPlugin.Databases;
+﻿using CentralAPI.ClientPlugin.Core.Configs;
+using CentralAPI.ClientPlugin.Databases;
 using CentralAPI.ClientPlugin.Network;
+using CentralAPI.ClientPlugin.PlayerProfiles;
 
 using LabApi.Loader.Features.Plugins;
-using LabExtended.Commands;
 
 namespace CentralAPI.ClientPlugin.Core;
 
@@ -23,6 +24,21 @@ public class CentralPlugin : Plugin<CentralConfig>
     /// Gets the active config instance.
     /// </summary>
     public new static CentralConfig Config => config;
+
+    /// <summary>
+    /// Gets the active network config.
+    /// </summary>
+    public static NetworkConfig Network => Config.Network;
+    
+    /// <summary>
+    /// Gets the active database config.
+    /// </summary>
+    public static DatabaseConfig Database => Config.Database;
+    
+    /// <summary>
+    /// Gets the active warns config.
+    /// </summary>
+    public static PunishmentsConfig Warns => Config.Warns;
     
     /// <inheritdoc cref="Plugin.Author"/>
     public override string Author { get; } = "marchellcx";
@@ -45,6 +61,7 @@ public class CentralPlugin : Plugin<CentralConfig>
         plugin = this;
         config = base.Config;
         
+        PlayerProfileManager.Init();
         DatabaseDirector.Init();
         NetworkClient.Init();
     }

@@ -3,9 +3,11 @@ using System.Reflection;
 
 using CentralAPI.ServerApp.Core.Logger;
 using CentralAPI.ServerApp.Databases;
+using CentralAPI.ServerApp.Discord;
 using CentralAPI.ServerApp.Network;
+using CentralAPI.ServerApp.PlayerProfiles;
 using CentralAPI.ServerApp.Server;
-
+using CentralAPI.SharedLib;
 using CommonLib;
 using CommonLib.Utilities.Console;
 
@@ -163,6 +165,8 @@ public static class Loader
         
         CommonLog.Info("Loader", "Starting the server ..");
         
+        SharedLibrary.RegisterMessages();
+        
         NetworkServer.Init();
         ScpManager.Init();
         
@@ -192,6 +196,8 @@ public static class Loader
         }
         
         DatabaseDirector.Init();
+        PlayerProfileManager.Init();
+        DiscordManager.Init();
         
         CommonLog.Info("Loader", "Startup finished.");
     }

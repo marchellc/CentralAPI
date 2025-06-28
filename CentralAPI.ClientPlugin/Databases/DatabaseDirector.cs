@@ -83,10 +83,10 @@ public static class DatabaseDirector
     /// <typeparam name="T">The collection type.</typeparam>
     public static void RequireGlobalCollection<T>(byte collectionId)
     {
-        if (CentralPlugin.Config.GlobalTable < 0 || CentralPlugin.Config.GlobalTable > 255)
+        if (CentralPlugin.Database.GlobalTable < 0 || CentralPlugin.Database.GlobalTable > 255)
             return;
 
-        RequireCollection<T>((byte)CentralPlugin.Config.GlobalTable, collectionId);
+        RequireCollection<T>((byte)CentralPlugin.Database.GlobalTable, collectionId);
     }
 
     /// <summary>
@@ -96,10 +96,10 @@ public static class DatabaseDirector
     /// <typeparam name="T">The collection type.</typeparam>
     public static void RequirePersonalCollection<T>(byte collectionId)
     {
-        if (CentralPlugin.Config.ServerTable < 0 || CentralPlugin.Config.ServerTable > 255)
+        if (CentralPlugin.Database.ServerTable < 0 || CentralPlugin.Database.ServerTable > 255)
             return;
 
-        RequireCollection<T>((byte)CentralPlugin.Config.ServerTable, collectionId);
+        RequireCollection<T>((byte)CentralPlugin.Database.ServerTable, collectionId);
     }
 
     /// <summary>
@@ -332,11 +332,11 @@ public static class DatabaseDirector
         IsDownloading = false;
         IsDownloaded = true;
 
-        if (CentralPlugin.Config.ServerTable > -1 && CentralPlugin.Config.ServerTable < byte.MaxValue)
-            ServerTable = GetOrAddTable((byte)CentralPlugin.Config.ServerTable);
+        if (CentralPlugin.Database.ServerTable > -1 && CentralPlugin.Database.ServerTable < byte.MaxValue)
+            ServerTable = GetOrAddTable((byte)CentralPlugin.Database.ServerTable);
         
-        if (CentralPlugin.Config.GlobalTable > -1 && CentralPlugin.Config.GlobalTable < byte.MaxValue)
-            GlobalTable = GetOrAddTable((byte)CentralPlugin.Config.GlobalTable);
+        if (CentralPlugin.Database.GlobalTable > -1 && CentralPlugin.Database.GlobalTable < byte.MaxValue)
+            GlobalTable = GetOrAddTable((byte)CentralPlugin.Database.GlobalTable);
         
         Downloaded?.InvokeSafe();
     }

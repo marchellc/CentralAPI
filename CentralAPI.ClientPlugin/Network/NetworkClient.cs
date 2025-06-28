@@ -3,7 +3,7 @@ using System.Net;
 using CentralAPI.ClientPlugin.Core;
 using CentralAPI.ClientPlugin.Databases;
 using CentralAPI.ClientPlugin.Logging;
-
+using CentralAPI.SharedLib;
 using CentralAPI.SharedLib.Requests;
 
 using CommonLib;
@@ -80,9 +80,9 @@ public static class NetworkClient
     
     internal static void Init()
     {
-        if (!IPAddress.TryParse(CentralPlugin.Config.ServerAddress, out var serverIp))
+        if (!IPAddress.TryParse(CentralPlugin.Network.ServerAddress, out var serverIp))
         {
-            ApiLog.Warn("Network Client", $"Could not parse server IP: &3{CentralPlugin.Config.ServerAddress}&r");
+            ApiLog.Warn("Network Client", $"Could not parse server IP: &3{CentralPlugin.Network.ServerAddress}&r");
             return;
         }
         
@@ -91,11 +91,11 @@ public static class NetworkClient
         CommonLibrary.Initialize(StartupArgs.Args);
         CommonLog.IsDebugEnabled = ApiLog.CheckDebug("CommonLibrary");
         
-        client = new(CentralPlugin.Config.BufferSize);
+        client = new(CentralPlugin.Network.BufferSize);
         
-        client.AllowReconnection = CentralPlugin.Config.AllowReconnection;
-        client.HeartbeatSeconds =  CentralPlugin.Config.HeartbeatSeconds;
-        client.MaxConnectionAttempts = CentralPlugin.Config.MaxConnectAttempts;
+        client.AllowReconnection = CentralPlugin.Network.AllowReconnection;
+        client.HeartbeatSeconds =  CentralPlugin.Network.HeartbeatSeconds;
+        client.MaxConnectionAttempts = CentralPlugin.Network.MaxConnectAttempts;
         
         client.OnStarted += OnStarted;
         client.OnStopped += OnStopped;
@@ -106,18 +106,13 @@ public static class NetworkClient
         client.OnSynchronized += OnSynchronized;
         client.OnFailed += OnFailed;
 
-        Task.Run(NetworkLibrary.CollectMessageTypes).ContinueWithOnMain(_ =>
+        Task.Run(SharedLibrary.RegisterMessages).ContinueWithOnMain(_ =>
         {
-            NetworkLibrary.MessageTypes = NetworkLibrary.MessageTypes.Concat([
-                typeof(RequestMessage),
-                typeof(ResponseMessage)
-            ]).ToArray();
-            
             PlayerUpdateHelper.OnUpdate += Update;
 
-            ApiLog.Info("Network Client", $"Connecting to: &1{serverIp}:{CentralPlugin.Config.ServerPort}&r ..");
+            ApiLog.Info("Network Client", $"Connecting to: &1{serverIp}:{CentralPlugin.Network.ServerPort}&r ..");
 
-            client.Connect(new(serverIp, CentralPlugin.Config.ServerPort));
+            client.Connect(new(serverIp, CentralPlugin.Network.ServerPort));
         });
     }
     
@@ -129,7 +124,7 @@ public static class NetworkClient
 
     private static void OnFailed()
     {
-        ApiLog.Warn("Network Client", $"Could not connect to &3{CentralPlugin.Config.ServerAddress}:{CentralPlugin.Config.ServerPort}&r!");
+        ApiLog.Warn("Network Client", $"Could not connect to &3{CentralPlugin.Network.ServerAddress}:{CentralPlugin.Network.ServerPort}&r!");
     }
 
     private static void OnSynchronized()

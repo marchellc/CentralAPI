@@ -18,6 +18,81 @@ using ServerApp.Server;
 /// </summary>
 public class ScpInstance : NetworkComponent
 {
+    /// <summary>
+    /// A list of registered delegates used to handle messages.
+    /// </summary>
+    public static volatile ConcurrentDictionary<Type, Func<ScpInstance, INetworkMessage, bool>> MessageHandlers = new();
+    
+    /// <summary>
+    /// Registers a message handler.
+    /// </summary>
+    /// <param name="type">The type of message to handle.</param>
+    /// <param name="handler">The delegate used to handle the message.</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="Exception"></exception>
+    public static void HandleMessage(Type type, Func<ScpInstance, INetworkMessage, bool> handler)
+    {
+        if (type is null)
+            throw new ArgumentNullException(nameof(type));
+        
+        if (handler is null)
+            throw new ArgumentNullException(nameof(handler));
+
+        if (!typeof(INetworkMessage).IsAssignableFrom(type))
+            throw new Exception($"Type '{type.FullName}' is not an INetworkMessage");
+
+        MessageHandlers.TryRemove(type, out _);
+        MessageHandlers.TryAdd(type, handler);
+        
+        CommonLog.Debug("Scp Manager", $"Registered message handler '{type.FullName}': {handler.Method?.ToString() ?? "null"}");
+    }
+
+    /// <summary>
+    /// Registers a message handler.
+    /// </summary>
+    /// <param name="handler">The delegate used to handle the message.</param>
+    /// <typeparam name="T">The type of message to handle.</typeparam>
+    public static void HandleMessage<T>(Func<ScpInstance, T, bool> handler) where T : INetworkMessage
+    {
+        if (handler is null)
+            throw new ArgumentNullException(nameof(handler));
+        
+        Func<ScpInstance, INetworkMessage, bool> customHandler = (server, message) =>
+        {
+            if (message is not T castMessage)
+                return false;
+
+            return handler(server, castMessage);
+        };
+
+        MessageHandlers.TryRemove(typeof(T), out _);
+        MessageHandlers.TryAdd(typeof(T), customHandler);
+        
+        CommonLog.Debug("Scp Manager", $"Registered message handler '{typeof(T).FullName}': {handler.Method?.ToString() ?? "null"}");
+    }
+    
+    /// <summary>
+    /// Removes a message handler.
+    /// </summary>
+    /// <param name="messageType">The type of message.</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    public static void RemoveMessageHandler(Type messageType)
+    {
+        if (messageType is null)
+            throw new ArgumentNullException(nameof(messageType));
+
+        MessageHandlers.TryRemove(messageType, out _);
+    }
+    
+    /// <summary>
+    /// Removes a message handler.
+    /// </summary>
+    /// <typeparam name="T">The type of message.</typeparam>
+    public static void RemoveMessageHandler<T>() where T : INetworkMessage
+    {
+        MessageHandlers.TryRemove(typeof(T), out _);
+    }
+    
     private volatile bool isTerminated;
     private volatile bool isIdentified;
 
@@ -29,9 +104,7 @@ public class ScpInstance : NetworkComponent
     private volatile ushort requestId = 1;
 
     private volatile ConcurrentDictionary<ushort, Action<NetworkReader, NetworkWriter>> requestHandlers = new();
-    private volatile ConcurrentDictionary<ushort, Action<NetworkReader>> responseHandlers = new();
-
-    private volatile ConcurrentDictionary<Type, Func<INetworkMessage, bool>> messageHandlers = new();
+    private  volatile ConcurrentDictionary<ushort, Action<NetworkReader>> responseHandlers = new();
     
     /// <summary>
     /// Whether or not this server has been terminated.
@@ -94,8 +167,6 @@ public class ScpInstance : NetworkComponent
         requestHandlers.Clear();
         responseHandlers.Clear();
         
-        messageHandlers.Clear();
-        
         ScpManager.SetTerminated(this);
     }
     
@@ -116,54 +187,6 @@ public class ScpInstance : NetworkComponent
         requestHandlers.TryAdd(requestType.GetShortCode(), handler);
         
         CommonLog.Debug("Scp Manager", $"Registered request handler '{requestType}': {handler.Method?.ToString() ?? "null"}");
-    }
-    
-    /// <summary>
-    /// Registers a message handler.
-    /// </summary>
-    /// <param name="type">The type of message to handle.</param>
-    /// <param name="handler">The delegate used to handle the message.</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="Exception"></exception>
-    public void HandleMessage(Type type, Func<INetworkMessage, bool> handler)
-    {
-        if (type is null)
-            throw new ArgumentNullException(nameof(type));
-        
-        if (handler is null)
-            throw new ArgumentNullException(nameof(handler));
-
-        if (!typeof(INetworkMessage).IsAssignableFrom(type))
-            throw new Exception($"Type '{type.FullName}' is not an INetworkMessage");
-
-        messageHandlers.TryRemove(type, out _);
-        messageHandlers.TryAdd(type, handler);
-        
-        CommonLog.Debug("Scp Manager", $"Registered message handler '{type.FullName}': {handler.Method?.ToString() ?? "null"}");
-    }
-
-    /// <summary>
-    /// Registers a message handler.
-    /// </summary>
-    /// <param name="handler">The delegate used to handle the message.</param>
-    /// <typeparam name="T">The type of message to handle.</typeparam>
-    public void HandleMessage<T>(Func<T, bool> handler) where T : INetworkMessage
-    {
-        if (handler is null)
-            throw new ArgumentNullException(nameof(handler));
-        
-        Func<INetworkMessage, bool> customHandler = message =>
-        {
-            if (message is not T castMessage)
-                return false;
-
-            return handler(castMessage);
-        };
-
-        messageHandlers.TryRemove(typeof(T), out _);
-        messageHandlers.TryAdd(typeof(T), customHandler);
-        
-        CommonLog.Debug("Scp Manager", $"Registered message handler '{typeof(T).FullName}': {handler.Method?.ToString() ?? "null"}");
     }
     
     /// <summary>
@@ -191,28 +214,6 @@ public class ScpInstance : NetworkComponent
             throw new ArgumentNullException(nameof(requestType));
         
         requestHandlers?.TryRemove(requestType.GetShortCode(), out _);
-    }
-    
-    /// <summary>
-    /// Removes a message handler.
-    /// </summary>
-    /// <param name="messageType">The type of message.</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    public void RemoveMessageHandler(Type messageType)
-    {
-        if (messageType is null)
-            throw new ArgumentNullException(nameof(messageType));
-
-        messageHandlers?.TryRemove(messageType, out _);
-    }
-
-    /// <summary>
-    /// Removes a message handler.
-    /// </summary>
-    /// <typeparam name="T">The type of message.</typeparam>
-    public void RemoveMessageHandler<T>() where T : INetworkMessage
-    {
-        messageHandlers?.TryRemove(typeof(T), out _);
     }
     
     /// <summary>
@@ -354,8 +355,8 @@ public class ScpInstance : NetworkComponent
                 return true;
             }
 
-            if (messageHandlers.TryGetValue(message.GetType(), out var messageHandler))
-                return messageHandler(message);
+            if (MessageHandlers.TryGetValue(message.GetType(), out var messageHandler))
+                return messageHandler(this, message);
         }
         catch (Exception ex)
         {

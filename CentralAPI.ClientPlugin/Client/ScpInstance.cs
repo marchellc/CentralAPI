@@ -49,7 +49,7 @@ public class ScpInstance : NetworkComponent
             writer.WriteUShort(ExServer.Port);
             
             writer.WriteString(ExServer.Name.RemoveHtmlTags());
-            writer.WriteString(CentralPlugin.Config.ServerAlias ?? string.Empty);
+            writer.WriteString(CentralPlugin.Network.ServerAlias ?? string.Empty);
         });
         
         NetworkClient.scp = this;

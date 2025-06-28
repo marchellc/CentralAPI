@@ -1,5 +1,7 @@
 using System.ComponentModel;
 
+using CentralAPI.ClientPlugin.Core.Configs;
+
 namespace CentralAPI.ClientPlugin.Core;
 
 /// <summary>
@@ -7,30 +9,15 @@ namespace CentralAPI.ClientPlugin.Core;
 /// </summary>
 public class CentralConfig
 {
-    [Description("The alias that will be used on the server.")]
-    public string ServerAlias { get; set; } = string.Empty;
+    [Description("Network client configuration.")]
+    public NetworkConfig Network { get; set; } = new();
     
-    [Description("Server IP.")] 
-    public string ServerAddress { get; set; } = "127.0.0.1";
+    [Description("Database client configuration.")]
+    public DatabaseConfig Database { get; set; } = new();
     
-    [Description("Server Port.")] 
-    public ushort ServerPort { get; set; } = 8888;
-
-    [Description("Client's internal buffer size.")]
-    public int BufferSize { get; set; } = ushort.MaxValue;
-
-    [Description("How many seconds to wait before sending a heartbeat.")]
-    public int HeartbeatSeconds { get; set; } = 10;
+    [Description("ID of the table that will contain punishment IDs. This should be a fully custom table as collection IDs are NOT customizable.")]
+    public byte PunishmentIdTableId { get; set; }
     
-    [Description("Maximum amount of connection attempts (includes reconnection).")]
-    public int MaxConnectAttempts { get; set; } = 5;
-
-    [Description("Whether or not the client should attempt to automatically reconnect.")]
-    public bool AllowReconnection { get; set; } = true;
-
-    [Description("Sets the server's personal database table ID (values below zero disable this, max. 255).")]
-    public int ServerTable { get; set; } = -1;
-    
-    [Description("Sets the server's global database table ID (values below zero disable this, max. 255).")]
-    public int GlobalTable { get; set; } = -1;
+    [Description("Warn punishments configuration.")]
+    public PunishmentsConfig Warns { get; set; } = new();
 }

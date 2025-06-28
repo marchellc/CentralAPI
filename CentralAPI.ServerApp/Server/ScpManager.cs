@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using CommonLib;
 
 using NetworkLib;
-
+using NetworkLib.Interfaces;
 using NetworkServer = CentralAPI.ServerApp.Network.NetworkServer;
 
 namespace CentralAPI.ServerApp.Server;
@@ -32,6 +32,56 @@ public static class ScpManager
     /// Contains a list of identified and unidentified SCP servers, keyed by their connection.
     /// </summary>
     public static volatile ConcurrentDictionary<NetworkConnection, ScpInstance> ConnectionToServer = new();
+
+    /// <summary>
+    /// Sends a message to all connected servers that match a predicate.
+    /// </summary>
+    /// <param name="message">The message to send.</param>
+    /// <param name="predicate">The server filtering predicate.</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    public static void SendToWhere(this INetworkMessage message, Predicate<ScpInstance> predicate)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+        
+        if (predicate is null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        foreach (var scpInstance in ConnectionToServer)
+        {
+            if (!predicate(scpInstance.Value))
+                continue;
+
+            scpInstance.Value.Send(message);
+        }
+    }
+
+    /// <summary>
+    /// Sends a message to all connected servers.
+    /// </summary>
+    /// <param name="message">The message to send.</param>
+    /// <param name="onlyVerified">Whether or not to send the message only to servers that have verified.</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    public static void SendToAll(this INetworkMessage message, bool onlyVerified = false)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        if (onlyVerified)
+        {
+            foreach (var scpInstance in PortToServer)
+            {
+                scpInstance.Value.Send(message);
+            }
+        }
+        else
+        {
+            foreach (var scpInstance in ConnectionToServer)
+            {
+                scpInstance.Value.Send(message);
+            }
+        }
+    }
 
     private static void OnSynchronized(NetworkConnection connection)
     {

@@ -64,13 +64,6 @@ public static class NetworkServer
         
         Loader.Updated += Update;
         
-        NetworkLibrary.CollectMessageTypes();
-        
-        NetworkLibrary.MessageTypes = NetworkLibrary.MessageTypes.Concat([
-            typeof(RequestMessage),
-            typeof(ResponseMessage)
-        ]).ToArray();
-        
         CommonLog.Info("Network Server", $"Starting the server on port '{config.Port}' ..");
 
         try
