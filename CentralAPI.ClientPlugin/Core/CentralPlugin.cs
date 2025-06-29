@@ -26,6 +26,11 @@ public class CentralPlugin : Plugin<CentralConfig>
     public new static CentralConfig Config => config;
 
     /// <summary>
+    /// Gets the server's alias.
+    /// </summary>
+    public static string Alias => Network?.ServerAlias ?? string.Empty;
+
+    /// <summary>
     /// Gets the active network config.
     /// </summary>
     public static NetworkConfig Network => Config.Network;

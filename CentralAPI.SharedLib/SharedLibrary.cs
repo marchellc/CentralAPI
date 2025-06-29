@@ -1,4 +1,5 @@
 using CentralAPI.SharedLib.PlayerProfiles;
+using CentralAPI.SharedLib.Punishments.Warns;
 using CentralAPI.SharedLib.Requests;
 
 using NetworkLib;
@@ -136,7 +137,12 @@ public static class SharedLibrary
                 typeof(ResponseMessage), 
                 
                 typeof(PlayerProfilePackageMessage),
-                typeof(PlayerProfileUpdateMessage)])
+                typeof(PlayerProfileUpdateMessage),
+            
+                typeof(WarnPackageMessage),
+                typeof(WarnDownloadMessage),
+                typeof(ConfirmedWarnMessage),
+                typeof(UpdateWarnMessage)])
             .ToArray();
     }
 }

@@ -1,114 +1,55 @@
-using CentralAPI.ClientPlugin.Core; 
 using CentralAPI.ClientPlugin.Network;
-using CentralAPI.ClientPlugin.Databases;
-
-using CentralAPI.ClientPlugin.Punishments.Warns;
-using CentralAPI.ClientPlugin.Punishments.Objects; 
-using CentralAPI.ClientPlugin.Punishments.Wrappers;
-
-using LabExtended.Attributes;
-
-using NetworkLib.Enums;
 
 namespace CentralAPI.ClientPlugin.Punishments;
 
 /// <summary>
 /// Base class for punishment directors.
 /// </summary>
-public abstract class PunishmentDirector<TInfo> where TInfo : PunishmentInfo
+public abstract class PunishmentDirector
 {
-    private bool isInitialized;
+    /// <summary>
+    /// Whether or not the director is ready.
+    /// </summary>
+    public bool IsReady { get; internal set; }
     
     /// <summary>
-    /// Gets the punishment database table.
+    /// Whether or not the director has downloaded it's data.
     /// </summary>
-    public DatabaseTable Table { get; private set; }
-    
-    /// <summary>
-    /// Gets the collection of expired punishments.
-    /// </summary>
-    public DatabaseCollection<TInfo> ExpiredPunishments { get; private set; }
-    
-    /// <summary>
-    /// Gets the collection of active punishments.
-    /// </summary>
-    public DatabaseCollection<TInfo> ActivePunishments { get; private set; }
+    public bool IsDownloaded { get; internal set; }
 
     /// <summary>
-    /// Whether or not the director is initialized.
+    /// Loads the director.
     /// </summary>
-    public bool IsInitialized => isInitialized;
-    
-    /// <summary>
-    /// Gets the ID of the table.
-    /// </summary>
-    public abstract byte TableID { get; }
-
-    /// <summary>
-    /// Gets the ID of the active collection.
-    /// </summary>
-    public abstract byte ActiveCollectionID { get; }
-    
-    /// <summary>
-    /// Gets the ID of the expired collection.
-    /// </summary>
-    public abstract byte ExpiredCollectionID { get; }
-    
-    /// <summary>
-    /// Initializes the director.
-    /// </summary>
-    public virtual void Initialize()
-    {
-        if (!isInitialized)
-        {
-            Table = DatabaseDirector.GetOrAddTable(TableID);
-
-            ActivePunishments = Table.GetOrAddCollection<TInfo>(ActiveCollectionID);
-            ExpiredPunishments = Table.GetOrAddCollection<TInfo>(ExpiredCollectionID);
-
-            isInitialized = true;
-        }
-    }
+    public abstract void Load();
 
     /// <summary>
     /// Unloads the director.
     /// </summary>
-    public virtual void Unload()
-    {
-        isInitialized = false;
-    }
+    public abstract void Unload();
 
     /// <summary>
-    /// Checks if the director is initialized and throws an exception if not.
+    /// Gets called once the database is downloaded.
     /// </summary>
-    public virtual void CheckInitialized()
-    {
-        if (!IsInitialized)
-            throw new Exception($"PunishmentDirector {GetType().Name} has not been initialized!");
-    }
-    
-    [LoaderInitialize(1)]
-    private static void OnInit()
-    {
-        DatabaseDirector.Downloaded += OnDownloaded;
-        NetworkClient.Disconnected += OnDisconnected;
-        
-        DatabaseDirector.RegisterWrapper(new DatabasePunishmentInfo<WarnPunishmentInfo>(() => new()));
-    }
+    public abstract void Download();
 
-    private static void OnDownloaded()
-    {
-        PunishmentID.OnDownloaded();
-        
-        if (CentralPlugin.Warns.Enabled)
-            WarnPunishmentDirector.Singleton.Initialize();
-    }
+    /// <summary>
+    /// Gets called once the network gets disconnected.
+    /// </summary>
+    public abstract void Disconnect();
 
-    private static void OnDisconnected(DisconnectReason _)
+    /// <summary>
+    /// Checks if the director is ready (and throws an exception if it isn't).
+    /// </summary>
+    /// <exception cref="Exception">The director is not ready.</exception>
+    public void CheckReady()
     {
-        PunishmentID.OnDisconnected();
+        if (NetworkClient.Scp is null)
+            throw new Exception("The network is disconnected!");
         
-        if (CentralPlugin.Warns.Enabled && WarnPunishmentDirector.Singleton.isInitialized)
-            WarnPunishmentDirector.Singleton.Unload();
+        if (!IsReady)
+            throw new Exception($"Director {GetType().Name} is not yet ready.");
+        
+        if (!IsDownloaded)
+            throw new Exception($"Director {GetType().Name} has not downloaded it's data yet..");
     }
 }

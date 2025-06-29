@@ -1,26 +1,25 @@
-using System.Net;
-
 using LabExtended.API;
+using LabExtended.Extensions;
+
 using NetworkLib;
 
 namespace CentralAPI.ClientPlugin.Punishments.Objects;
 
 /// <summary>
-/// Contains data about a player of a punishment.
+/// Used as a record about a player.
 /// </summary>
 public class PunishmentPlayer
 {
     /// <summary>
-    /// Gets the information for the server player.
+    /// Gets the server player info.
     /// </summary>
     public static PunishmentPlayer Server { get; } = new()
     {
         Id = "server",
-        Name = "Server",
+        Name = "server",
+        Address = "server",
         
-        Ranks = ["server"],
-        
-        Address = IPAddress.Loopback
+        Ranks = ["server"]
     };
     
     /// <summary>
@@ -29,56 +28,62 @@ public class PunishmentPlayer
     public string Id { get; set; } = string.Empty;
     
     /// <summary>
-    /// Gets or sets the player's name.
+    /// Gets or sets the player's nickname.
     /// </summary>
     public string Name { get; set; } = string.Empty;
-
+    
     /// <summary>
-    /// Gets the array of ranks the player had at the time.
+    /// Gets or sets the player's IP address.
+    /// </summary>
+    public string Address { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Gets or sets the list of ranks the player had active when creating this record.
     /// </summary>
     public string[] Ranks { get; set; } = Array.Empty<string>();
     
     /// <summary>
-    /// Gets or sets the player's IP.
+    /// Whether or not this record is the server player.
     /// </summary>
-    public IPAddress Address { get; set; } = IPAddress.None;
+    public bool IsServer => 
+        Id == "server" 
+        && Name == "server" 
+        && Address == "server" 
+        && Ranks.Length == 1 
+        && Ranks[0] == "server";
 
     /// <summary>
-    /// Writes the player data.
+    /// Attempts to invoke a delegate on the player this record targets.
     /// </summary>
-    /// <param name="writer">The target writer.</param>
-    public void Write(NetworkWriter writer)
+    /// <param name="action">The delegate to invoke.</param>
+    /// <returns>true if the delegate was invoked</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public bool TryAction(Action<ExPlayer> action)
     {
-        writer.WriteString(Id);
-        writer.WriteString(Name);
+        if (action is null)
+            throw new ArgumentNullException(nameof(action));
+
+        if (!TryGet(out var player))
+            return false;
         
-        writer.WriteIpAddress(Address);
-        
-        writer.WriteCollection(Ranks, (_, str) => writer.WriteString(str));
+        action.InvokeSafe(player);
+        return true;
     }
 
     /// <summary>
-    /// Reads the player data.
+    /// Attempts to find the target player.
     /// </summary>
-    /// <param name="reader">The target reader.</param>
-    public void Read(NetworkReader reader)
-    {
-        Id = reader.ReadString();
-        Name = reader.ReadString();
-
-        Address = reader.ReadIpAddress();
-        
-        Ranks = reader.ReadArray(_ => reader.ReadString());
-    }
-
-    /// <summary>
-    /// Attempts to retrieve the connected player instance.
-    /// </summary>
-    /// <param name="player">The player.</param>
+    /// <param name="player">The found player.</param>
     /// <returns>true if the player was found</returns>
-    public bool TryGetPlayer(out ExPlayer player)
+    public bool TryGet(out ExPlayer player)
     {
-        if (string.Equals(Id, "server"))
+        if (string.IsNullOrEmpty(Id))
+        {
+            player = null;
+            return false;
+        }
+        
+        if (IsServer)
         {
             player = ExPlayer.Host;
             return true;
@@ -86,61 +91,58 @@ public class PunishmentPlayer
 
         return ExPlayer.TryGetByUserId(Id, out player);
     }
-    
+
     /// <summary>
-    /// Converts a connected player to a database representation.
+    /// Writes the data.
     /// </summary>
-    /// <param name="player">The target player.</param>
-    /// <returns>The converted player.</returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    public static PunishmentPlayer FromPlayer(ExPlayer player)
+    /// <param name="writer">The target writer.</param>
+    public void Write(NetworkWriter writer)
     {
-        if (player?.ReferenceHub == null)
-            throw new ArgumentNullException(nameof(player));
-        
-        if (player.IsHost)
-            return Server;
-
-        var info = new PunishmentPlayer()
-        {
-            Id = player.UserId,
-            Name = player.Nickname,
-            
-            Address = IPAddress.Parse(player.IpAddress)
-        };
-        
-        if (!string.IsNullOrWhiteSpace(player.PermissionsGroupName))
-            info.Ranks = [player.PermissionsGroupName];
-
-        return info;
+        writer.WriteString(Id);
+        writer.WriteString(Name);
+        writer.WriteString(Address);
+        writer.WriteCollection(Ranks, (_, str) => writer.WriteString(str));
     }
 
     /// <summary>
-    /// Creates a <see cref="PunishmentPlayer"/> instance with custom data.
+    /// Reads the data.
     /// </summary>
-    /// <param name="id">The player's ID.</param>
-    /// <param name="name">The player's name.</param>
-    /// <param name="address">The player's IP address.</param>
-    /// <param name="ranks">The player's ranks.</param>
-    /// <returns>The created instance.</returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    public static PunishmentPlayer FromCustom(string id, string name, IPAddress address, params string[] ranks)
+    /// <param name="reader">The target reader.</param>
+    public void Read(NetworkReader reader)
     {
-        if (string.IsNullOrEmpty(id))
-            throw new ArgumentNullException(nameof(id));
+        Id = reader.ReadString();
+        Name = reader.ReadString();
+        Address = reader.ReadString();
+        Ranks = reader.ReadArray(_ => reader.ReadString());
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="PunishmentPlayer"/> instance containing information about a specific player.
+    /// </summary>
+    /// <param name="target">The target player.</param>
+    /// <returns>The created instance</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="Exception"></exception>
+    public static PunishmentPlayer FromPlayer(ExPlayer target)
+    {
+        if (target?.ReferenceHub == null)
+            throw new ArgumentNullException(nameof(target));
+
+        if (target.IsServer)
+            return Server;
+
+        if (target.IsUnverified)
+            throw new Exception("Player has not been verified yet.");
+
+        var info = new PunishmentPlayer();
+
+        info.Id = target.UserId;
+        info.Name = target.Nickname;
+        info.Address = target.IpAddress;
         
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentNullException(nameof(name));
-        
-        if (address == null)
-            throw new ArgumentNullException(nameof(address));
-        
-        return new PunishmentPlayer()
-        {
-            Id = id,
-            Name = name,
-            Address = address,
-            Ranks = ranks
-        };
+        if (!string.IsNullOrEmpty(target.PermissionsGroupName))
+            info.Ranks = [target.PermissionsGroupName];
+
+        return info;
     }
 }

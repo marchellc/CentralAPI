@@ -4,25 +4,19 @@ using NetworkLib;
 
 namespace CentralAPI.ClientPlugin.Punishments.Warns;
 
-/// <summary>
-/// A subtype of <see cref="PunishmentInfo"/> used specifically for warns.
-/// </summary>
-public class WarnPunishmentInfo : PunishmentInfo
+public class WarnInfo : PunishmentInfo
 {
-    /// <inheritdoc cref="PunishmentInfo.CanExpire"/>
-    public override bool CanExpire { get; } = true;
-
     /// <summary>
     /// Whether or not the warn was displayed to the target player.
     /// </summary>
-    public bool WasDisplayed { get; internal set; }
+    public bool IsDisplayed { get; set; }
 
     /// <inheritdoc cref="PunishmentInfo.Read"/>>
     public override void Read(NetworkReader reader)
     {
         base.Read(reader);
         
-        WasDisplayed = reader.ReadBool();
+        IsDisplayed = reader.ReadBool();
     }
 
     /// <inheritdoc cref="PunishmentInfo.Write"/>>
@@ -30,6 +24,6 @@ public class WarnPunishmentInfo : PunishmentInfo
     {
         base.Write(writer);
         
-        writer.WriteBool(WasDisplayed);
+        writer.WriteBool(IsDisplayed);
     }
 }

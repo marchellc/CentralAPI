@@ -1,3 +1,4 @@
+using CentralAPI.ClientPlugin.Punishments.Objects.Logs;
 using CentralAPI.SharedLib;
 
 using NetworkLib;
@@ -5,172 +6,139 @@ using NetworkLib;
 namespace CentralAPI.ClientPlugin.Punishments.Objects;
 
 /// <summary>
-/// Contains punishment information.
+/// Contains information about a punishment.
 /// </summary>
 public abstract class PunishmentInfo
 {
     /// <summary>
-    /// Gets the ID of the last reserved update type (which can be used as an offset for custom types).
+    /// Gets or sets the alias of the server the punishment was issued on.
     /// </summary>
-    public const byte ReservedUpdateTypeOffset = 1;
+    public string Server { get; set; } = string.Empty;
     
     /// <summary>
-    /// Whether or not this punishment can expire.
+    /// Gets or sets the reason of the punishment.
     /// </summary>
-    public abstract bool CanExpire { get; }
+    public string Reason { get; set; } = string.Empty;
     
     /// <summary>
-    /// Gets the ID of the punishment.
+    /// Gets or sets the ID of the punishment.
     /// </summary>
-    public ulong Id { get; internal set; }
-
-    /// <summary>
-    /// Gets the issuing player.
-    /// </summary>
-    public PunishmentPlayer Issuer { get; } = new();
-
-    /// <summary>
-    /// Gets the target player.
-    /// </summary>
-    public PunishmentPlayer Target { get; } = new();
-
-    /// <summary>
-    /// Gets the duration of the punishment.
-    /// </summary>
-    public PunishmentDuration? Duration { get; private set; }
+    public ulong Id { get; set; }
     
     /// <summary>
-    /// Gets the reason of the punishment.
+    /// Gets the time information of the punishment.
     /// </summary>
-    public PunishmentReason Reason { get; } = new();
+    public PunishmentTime Time { get; } = new();
 
     /// <summary>
-    /// Gets a list of punishment updates.
+    /// Gets the record of the issuing player.
     /// </summary>
-    public List<PunishmentUpdate> Updates { get; } = new();
+    public PunishmentPlayer Issuer { get; internal set; }
 
     /// <summary>
-    /// Creates a new <see cref="PunishmentInfo"/> instance.
+    /// Gets the record of the target player.
     /// </summary>
-    public PunishmentInfo()
-    {
-        if (CanExpire)
-        {
-            Duration = new();
-        }
-    }
+    public PunishmentPlayer Target { get; internal set; }
 
     /// <summary>
-    /// Reads the punishment.
+    /// Contains logged punishment data updates.
+    /// </summary>
+    public List<PunishmentLog> Logs { get; } = new();
+
+    /// <summary>
+    /// Reads the data.
     /// </summary>
     /// <param name="reader">The target reader.</param>
     public virtual void Read(NetworkReader reader)
     {
-        var updateCount = reader.ReadInt();
+        Issuer ??= new();
+        Target ??= new();
 
-        for (var i = 0; i < updateCount; i++)
+        Id = reader.ReadULong();
+
+        Server = reader.ReadString();
+        Reason = reader.ReadString();
+
+        Time.Read(reader);
+        Issuer.Read(reader);
+        Target.Read(reader);
+
+        Logs.Clear();
+
+        var logCount = reader.ReadInt();
+
+        for (var i = 0; i < logCount; i++)
         {
-            var updateType = reader.ReadByte();
+            var logType = reader.ReadByte();
+            var log = CreateLog(logType);
 
-            // Duration update
-            if (updateType == 0)
+            if (log != null)
             {
-                var update = new PunishmentUpdate();
+                log.IsDirector = reader.ReadBool();
+                log.Server = reader.ReadString();
+                log.Time = reader.ReadDate();
 
-                update.Type = 0;
-                update.Time = reader.ReadDate();
-
-                update.OriginalValue = reader.ReadTime();
-                update.NewValue = reader.ReadTime();
-                
-                update.Player = new();
-                update.Player.Read(reader);
-                
-                Updates.Add(update);
-            }
-            // Notes update
-            else if (updateType == 1)
-            {
-                var update = new PunishmentUpdate();
-
-                update.Type = 1;
-                update.Time = reader.ReadDate();
-
-                update.OriginalValue = reader.ReadString();
-                
-                update.Player = new();
-                update.Player.Read(reader);
-                
-                Updates.Add(update);
-            }
-            // Custom update
-            else
-            {
-                var update = ReadUpdate(updateType, reader.ReadDate(), reader);
-
-                if (update != null)
+                if (!log.IsDirector)
                 {
-                    Updates.Add(update);
+                    log.Creator = new();
+                    log.Creator.Read(reader);
                 }
+                
+                log.Read(reader);
+                
+                Logs.Add(log);
             }
         }
     }
 
     /// <summary>
-    /// Writes the punishment.
+    /// Writes the data.
     /// </summary>
     /// <param name="writer">The target writer.</param>
     public virtual void Write(NetworkWriter writer)
     {
-        writer.WriteInt(Updates.Count);
-
-        for (var i = 0; i < Updates.Count; i++)
-        {
-            var update = Updates[i];
-
-            writer.WriteByte(update.Type);
-            writer.WriteDate(update.Time);
-            
-            // Duration update
-            if (update.Type == 0)
-            {
-                writer.WriteTime((TimeSpan)update.OriginalValue);
-                writer.WriteTime((TimeSpan)update.NewValue);
-                
-                update.Player.Write(writer);
-            }
-            // Notes update
-            else if (update.Type == 1)
-            {
-                writer.WriteString(update.OriginalValue.ToString());
-            }
-            // Custom update
-            else
-            {
-                WriteUpdate(update, writer);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reads an update log.
-    /// </summary>
-    /// <param name="updateType">The type of the update log.</param>
-    /// <param name="updateTime">The date of when the update was created.</param>
-    /// <param name="reader">The target reader.</param>
-    /// <returns>The read update log.</returns>
-    public virtual PunishmentUpdate ReadUpdate(byte updateType, DateTime updateTime, NetworkReader reader)
-    {
-        return null;
-    }
-
-    /// <summary>
-    /// Writes an update log.
-    /// </summary>
-    /// <param name="update">The update log.</param>
-    /// <param name="writer">The target writer.</param>
-    public virtual void WriteUpdate(PunishmentUpdate update, NetworkWriter writer)
-    {
+        writer.WriteULong(Id);
         
+        writer.WriteString(Server);
+        writer.WriteString(Reason);
+        
+        Time.Write(writer);
+        Issuer.Write(writer);
+        Target.Write(writer);
+        
+        writer.WriteInt(Logs.Count);
+        
+        Logs.ForEach(log =>
+        {
+            writer.WriteByte(log.LogType);
+            writer.WriteBool(log.IsDirector);
+            writer.WriteString(log.Server);
+            writer.WriteDate(log.Time);
+            
+            if (!log.IsDirector)
+                log.Creator?.Write(writer);
+            
+            log.Write(writer);
+        });
+    }
+
+    /// <summary>
+    /// Creates a log.
+    /// </summary>
+    /// <param name="logType">The type of the log to create.</param>
+    /// <returns>The created log.</returns>
+    public virtual PunishmentLog CreateLog(byte logType)
+    {
+        switch (logType)
+        {
+            case 0:
+                return new ReasonUpdateLog();
+            
+            case 1:
+                return new DurationUpdateLog();
+            
+            default:
+                return null;
+        }
     }
 }
